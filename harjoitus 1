@@ -1,0 +1,21 @@
+#moduuli asentaa tuoreet versiot irssistä sekä screenistä, sekä vaihtaa irssin asetustiedoston
+
+class irssi {
+
+	exec { 'apt-get update':
+    		command => '/usr/bin/apt-get update',
+    	}
+	
+	package { 'irssi':
+		ensure => installed,
+	}
+
+	package { 'screen':
+		ensure => installed,
+	}
+
+	file { '/home/teemu/.irssi/config':
+		content => template('irssi/config'),
+	}
+	
+}
