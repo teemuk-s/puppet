@@ -1,0 +1,105 @@
+master: xubuntu 16.04 
+slave: vagrant: ubuntu server 14.04
+puppet version 3.8.5
+
+
+Asennetaan vagrant jotta saadaan virtuaalinen orjakone leikkiin mukaan:
+
+sudo apt-get install vagrant virtualbox
+vagrant add box ubuntu/trusty64   //asentaa ubuntu server 14.04
+vagrant init ubuntu/trusty64      //luo asetustiedoston
+vagrant up                        //käynnistää virtuaalikoneen
+vagrant ssh                       //ottaa ssh-yhteyden koneelle
+
+vaihetaan hostname slave1:ksi tiedostoissa:
+
+/etc/hostname 
+/etc/hosts
+
+Pingataan molemmissa koneissa toisiaan, jotta tiedetään yhteyden pelaavan:
+
+ping master.lan
+ping slave1.lan
+
+
+Masterkoneeseen asennetaan puppetmaster:
+
+sudo apt-get install puppetmaster
+
+määritellään masterin osoite lisäämällä tiedoston /etc/puppet/puppet.conf loppuun rivi:
+dns_alt_names = master, master.lan
+
+poistetaan vanhat salausavaimet:
+sudo service puppetmaster stop
+sudo rm -r /var/lib/puppet/ssl
+
+ja käynnistetään uudestaan:
+sudo service puppetmaster start
+
+Asennetaan orjakoneelle puppet:
+sudo apt-get install puppet
+
+kerrotaan master serverin osoite orjalle muokkaamalla asetustiedostoa lisäämällä loppuun rivit:
+[agent]
+server = master.lan
+
+laitetaan puppet orjaksi:
+
+sudo puppet agent --enable
+
+testataan:
+
+sudo puppet agent --test --debug
+
+Pistetään avaimet kuntoon master-koneessa:
+
+sudo puppet cert --list
+
+valitaan vagrantissa oleva slave:
+
+sudo puppet cert sign slave1.lan
+
+kaikki näyttäisi olevan ok.
+
+Tehdään masteriin puppetmoduuli "test"
+
+teemu@master:/etc/puppet/modules$ tree
+.
+└── test
+    └── manifests
+        └── init.pp
+init.pp:
+
+class test {
+file { '/tmp/hi':
+                content => "Testing 123...\n"
+        }
+
+
+}
+
+sekä 
+
+/etc/puppet/manifests/site.pp:
+include test
+
+tämä jakaa test-modulin kaikille orjille.
+
+Testataan
+
+orjakoneella komento:
+sudo service puppet restart
+
+näin saadaan ilman odottelua tuoreimmat puppet käskyt kehiin,
+
+ja lopputuloksena:
+
+vagrant@slave1:/$ cat /tmp/hi 
+Testing 123...
+
+
+
+lähteet: http://terokarvinen.com/2012/puppetmaster-on-ubuntu-12-04
+
+
+
